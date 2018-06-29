@@ -1,0 +1,9 @@
+
+//to popup prompt
+git config --global credential.modalPrompt true
+//add credential manager (simple user)
+git config --global credential.helper wincred
+// install https://github.com/Microsoft/Git-Credential-Manager-for-Windows
+// 4 multy users
+//use multy users
+git config --global credential.useHttpPath true
