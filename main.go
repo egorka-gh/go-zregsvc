@@ -1,26 +1,34 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/spf13/viper"
 )
 
 var db *sqlx.DB
 
 func init() {
 	var err error
-	db, err = sqlx.Connect("mysql", "root:3411@tcp(127.0.0.1:3306)/pshdata")
+	viper.SetDefault("Port", "8080")
+	viper.SetDefault("ConnectionString", "root:3411@tcp(127.0.0.1:3306)/pshdata")
+	viper.AddConfigPath(".")
+	viper.SetConfigName("config")
+	err = viper.ReadInConfig()
+	if err != nil {
+		log.Print(err)
+		log.Print("Using defaults")
+	}
+
+	db, err = sqlx.Connect("mysql", viper.GetString("ConnectionString"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err = db.Ping(); err != nil {
-		log.Fatal(err)
-	}
+	//gin.SetMode(gin.ReleaseMode)
 }
 
 func main() {
@@ -28,7 +36,7 @@ func main() {
 	r.GET("/ping/", PingMe)
 	r.GET("/states/", GetStates)
 
-	r.Run()
+	r.Run(":" + viper.GetString("Port"))
 	//fmt.Printf("hello, world\n")
 }
 
@@ -50,7 +58,7 @@ func PingMe(c *gin.Context) {
 func GetStates(c *gin.Context) {
 	if list, err := loadStates(); err != nil {
 		c.AbortWithStatus(404)
-		fmt.Println(err)
+		log.Print(err)
 	} else {
 		c.JSON(200, list)
 	}

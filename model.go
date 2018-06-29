@@ -27,6 +27,22 @@ type CardProgram struct {
 	CheckIssued bool   `json:"checkIssued" db:"checkIssued"`
 }
 
+//Client client model
+type Client struct {
+	Card       string `json:"card" db:"card"`
+	State      int    `json:"state" db:"state"`
+	Surname    string `json:"surname" db:"surname"`
+	Name       string `json:"name" db:"name"`
+	Patronymic string `json:"patronymic" db:"patronymic"`
+	PhoneCode  string `json:"phoneCode" db:"phoneCode"`
+	Phone      string `json:"phone" db:"phone"`
+	Email      string `json:"email" db:"email"`
+	Gender     int    `json:"gender" db:"gender"`
+	Birthday   string `json:"birthday" db:"birthday"`
+	Pet        string `json:"pet" db:"pet"`
+	SendPromo  bool   `json:"sendPromo" db:"sendPromo"`
+}
+
 func loadStates() ([]ClientState, error) {
 	var list []ClientState
 	var ssql = "SELECT cs.id, ifnull(cs.name,'') name, ifnull(csm.web_comment,'') web_comment FROM client_state cs LEFT OUTER JOIN client_state_msg csm ON cs.id = csm.id WHERE cs.id!=0 ORDER BY cs.id"
