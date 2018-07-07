@@ -4,7 +4,7 @@ package main
 type ClientState struct {
 	ID         int    `json:"id" db:"id"`
 	Name       string `json:"name" db:"name"`
-	WebComment string `json:"сomment" db:"web_comment"`
+	WebComment string `json:"web_comment" db:"web_comment"`
 }
 
 //ValidateResult response 4 frontend

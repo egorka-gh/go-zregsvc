@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"strings"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -15,6 +17,8 @@ func init() {
 	var err error
 	viper.SetDefault("Port", "8080")
 	viper.SetDefault("ConnectionString", "root:3411@tcp(127.0.0.1:3306)/pshdata")
+	//TODO remove in prod
+	viper.SetDefault("cors", "http://localhost:4200")
 	viper.AddConfigPath(".")
 	viper.SetConfigName("config")
 	err = viper.ReadInConfig()
@@ -33,6 +37,13 @@ func init() {
 
 func main() {
 	r := gin.Default()
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = strings.Split(viper.GetString("cors"), ",")
+	//config.AllowOrigins = []string{"http://localhost:4200"}
+	//config.AllowAllOrigins = true
+
+	r.Use(cors.New(config))
 	r.GET("/ping/", PingMe)
 	r.GET("/states/", GetStates)
 
