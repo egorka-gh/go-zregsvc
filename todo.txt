@@ -1,3 +1,5 @@
+go build && zregsvc.exe
+
 	public DmlResult<Client> cardAdd(Client client){
 		DmlResult<Client> result= new DmlResult<Client>();
 		//check if card exists vs state < CL_REGISTRATION

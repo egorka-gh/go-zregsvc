@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -46,6 +47,7 @@ func main() {
 	r.Use(cors.New(config))
 	r.GET("/ping/", PingMe)
 	r.GET("/states/", GetStates)
+	r.POST("/validate/", CardValidate)
 
 	r.Run(":" + viper.GetString("Port"))
 	//fmt.Printf("hello, world\n")
@@ -72,5 +74,18 @@ func GetStates(c *gin.Context) {
 		log.Print(err)
 	} else {
 		c.JSON(200, list)
+	}
+}
+
+//CardValidate check client
+func CardValidate(c *gin.Context) {
+	var res ValidateResult
+
+	if err := c.ShouldBindJSON(&res); err == nil {
+		c.JSON(http.StatusOK, validateCard(res.Card))
+	} else {
+		res.ErrCode = -1
+		res.Message = err.Error()
+		c.JSON(http.StatusOK, res)
 	}
 }
