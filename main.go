@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dchest/captcha"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
@@ -47,6 +49,7 @@ func main() {
 	r.Use(cors.New(config))
 	r.GET("/ping/", PingMe)
 	r.GET("/states/", GetStates)
+	r.GET("/captcha/", GetCaptcha)
 	r.POST("/validate/", CardValidate)
 
 	r.Run(":" + viper.GetString("Port"))
@@ -62,9 +65,16 @@ func PingMe(c *gin.Context) {
 		res.Message = err.Error()
 	} else {
 		res.Message = "Ping OK"
+		res.Captcha = captcha.New()
+		res.CaptchaState = 1
 	}
 	c.JSON(200, res)
+}
 
+//GetCaptcha check db state
+func GetCaptcha(c *gin.Context) {
+	//gin.WrapH(captcha.Server(240, 80))
+	captcha.Server(240, 80).ServeHTTP(c.Writer, c.Request)
 }
 
 //GetStates read ClientState's from db

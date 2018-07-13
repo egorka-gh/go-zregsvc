@@ -14,11 +14,14 @@ type ClientState struct {
 
 //ValidateResult response 4 frontend
 type ValidateResult struct {
-	Program int    `json:"program" db:"program"`
-	Card    string `json:"card" db:"card"`
-	State   int    `json:"state" db:"state"`
-	ErrCode int    `json:"err" db:"err"`
-	Message string `json:"message" db:"message"`
+	Program         int    `json:"program" db:"program"`
+	Card            string `json:"card" db:"card"`
+	State           int    `json:"state" db:"state"`
+	ErrCode         int    `json:"err" db:"err"`
+	Message         string `json:"message" db:"message"`
+	Captcha         string `json:"captcha"`
+	CaptchaSolution string `json:"captchaSolution"`
+	CaptchaState    int    `json:"captchaState"`
 }
 
 //CardProgram discount programm
