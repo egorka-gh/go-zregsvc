@@ -49,7 +49,7 @@ func main() {
 	r.Use(cors.New(config))
 	r.GET("/ping/", PingMe)
 	r.GET("/states/", GetStates)
-	r.GET("/captcha/", GetCaptcha)
+	r.GET("/captcha/:image", GetCaptcha)
 	r.POST("/validate/", CardValidate)
 
 	r.Run(":" + viper.GetString("Port"))
@@ -68,13 +68,14 @@ func PingMe(c *gin.Context) {
 		res.Captcha = captcha.New()
 		res.CaptchaState = 1
 	}
+	//log.Println("PingMe")
 	c.JSON(200, res)
 }
 
 //GetCaptcha check db state
 func GetCaptcha(c *gin.Context) {
-	//gin.WrapH(captcha.Server(240, 80))
-	captcha.Server(240, 80).ServeHTTP(c.Writer, c.Request)
+	//gin.WrapH(captcha.Server(200, 80))
+	captcha.Server(210, 70).ServeHTTP(c.Writer, c.Request)
 }
 
 //GetStates read ClientState's from db
