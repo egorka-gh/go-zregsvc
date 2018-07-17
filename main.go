@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dchest/captcha"
 
@@ -15,6 +16,7 @@ import (
 )
 
 var db *sqlx.DB
+var captchaStore TagedStore
 
 func init() {
 	var err error
@@ -35,6 +37,10 @@ func init() {
 		log.Fatal(err)
 	}
 
+	captchaStore = NewTagedStore(100, 60*time.Minute)
+	captcha.SetCustomStore(captchaStore)
+
+	//TODO add in prod
 	//gin.SetMode(gin.ReleaseMode)
 }
 
