@@ -59,9 +59,7 @@ func loadStates() ([]ClientState, error) {
 	return list, err
 }
 
-func validateCard(card string) ValidateResult {
-	var result ValidateResult
-	result.Card = card
+func validateCard(result ValidateResult) ValidateResult {
 	result.State = 0
 	result.ErrCode = 0
 
@@ -78,7 +76,7 @@ func validateCard(card string) ValidateResult {
 		" INNER JOIN program_cards pc ON p.id = pc.program AND pc.active!=0" +
 		" WHERE LENGTH(?) = pc.card_len AND ? BETWEEN pc.card_start AND pc.card_end AND p.external=0 AND p.active !=0"
 	var prg CardProgram
-	err := db.Get(&prg, ssql, card, card)
+	err := db.Get(&prg, ssql, result.Card, result.Card)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			//range not found
@@ -123,5 +121,8 @@ func validateCard(card string) ValidateResult {
 		}
 	}
 
+	if result.ErrCode != 0 {
+		result.Program = 0
+	}
 	return result
 }

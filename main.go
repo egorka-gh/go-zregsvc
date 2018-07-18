@@ -99,7 +99,53 @@ func CardValidate(c *gin.Context) {
 	var res ValidateResult
 
 	if err := c.ShouldBindJSON(&res); err == nil {
-		c.JSON(http.StatusOK, validateCard(res.Card))
+		//check captcha
+		if len(res.Captcha) == 0 {
+			//err captha id empty
+			res.ErrCode = -5
+			res.CaptchaState = -10
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		card, ok := captchaStore.GetTag(res.Captcha)
+		if !ok {
+			//err captha id invalid
+			res.ErrCode = -5
+			res.CaptchaState = -10
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		//chek if captha not taged vs card or card is same
+		if len(card) != 0 && card != res.Card {
+			//err attempt to use solved capthca vs onother card
+			res.ErrCode = -5
+			res.CaptchaState = -100
+			c.JSON(http.StatusOK, res)
+			return
+		}
+
+		if !captcha.VerifyString(res.Captcha, res.CaptchaSolution) {
+			//err wrong  captha solution
+			res.ErrCode = -5
+			res.CaptchaState = -1
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		res.ErrCode = 0
+		res.CaptchaState = 100
+		//check card in db
+		res = validateCard(res)
+		if res.ErrCode == 0 {
+			//lock capthca vc card
+			if !captchaStore.SetTag(res.Captcha, res.Card) {
+				// some thread lock capthca ???
+				res.ErrCode = -5
+				res.CaptchaState = -100
+				res.Program = 0
+				res.State = 0
+			}
+		}
+		c.JSON(http.StatusOK, res)
 	} else {
 		res.ErrCode = -1
 		res.Message = err.Error()
