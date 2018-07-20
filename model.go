@@ -52,6 +52,11 @@ type Client struct {
 	SendPromo  bool   `json:"sendPromo" db:"send_promo"`
 }
 
+type RegisterDTO struct {
+	Client Client
+	Result ValidateResult
+}
+
 func loadStates() ([]ClientState, error) {
 	var list []ClientState
 	var ssql = "SELECT cs.id, ifnull(cs.name,'') name, ifnull(csm.web_comment,'') web_comment FROM client_state cs LEFT OUTER JOIN client_state_msg csm ON cs.id = csm.id WHERE cs.id!=0 ORDER BY cs.id"

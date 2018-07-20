@@ -57,6 +57,7 @@ func main() {
 	r.GET("/states/", GetStates)
 	r.GET("/captcha/:image", GetCaptcha)
 	r.POST("/validate/", CardValidate)
+	r.POST("/register/", CardRegister)
 
 	r.Run(":" + viper.GetString("Port"))
 	//fmt.Printf("hello, world\n")
@@ -94,45 +95,51 @@ func GetStates(c *gin.Context) {
 	}
 }
 
+func ValidateCaptcha(res *ValidateResult) bool {
+	//check captcha
+	if len(res.Captcha) == 0 {
+		//err captha id empty
+		res.ErrCode = -5
+		res.CaptchaState = -10
+		return false
+	}
+	card, ok := captchaStore.GetTag(res.Captcha)
+	if !ok {
+		//err captha id invalid
+		res.ErrCode = -5
+		res.CaptchaState = -10
+		return false
+	}
+	//chek if captha not taged vs card or card is same
+	if len(card) != 0 && card != res.Card {
+		//err attempt to use solved capthca vs onother card
+		res.ErrCode = -5
+		res.CaptchaState = -100
+		return false
+	}
+
+	if !captcha.VerifyString(res.Captcha, res.CaptchaSolution) {
+		//err wrong  captha solution
+		res.ErrCode = -5
+		res.CaptchaState = -1
+		return false
+	}
+	res.ErrCode = 0
+	res.CaptchaState = 100
+	return true
+}
+
 //CardValidate check client
 func CardValidate(c *gin.Context) {
 	var res ValidateResult
 
 	if err := c.ShouldBindJSON(&res); err == nil {
 		//check captcha
-		if len(res.Captcha) == 0 {
-			//err captha id empty
-			res.ErrCode = -5
-			res.CaptchaState = -10
-			c.JSON(http.StatusOK, res)
-			return
-		}
-		card, ok := captchaStore.GetTag(res.Captcha)
-		if !ok {
-			//err captha id invalid
-			res.ErrCode = -5
-			res.CaptchaState = -10
-			c.JSON(http.StatusOK, res)
-			return
-		}
-		//chek if captha not taged vs card or card is same
-		if len(card) != 0 && card != res.Card {
-			//err attempt to use solved capthca vs onother card
-			res.ErrCode = -5
-			res.CaptchaState = -100
+		if !ValidateCaptcha(&res){
 			c.JSON(http.StatusOK, res)
 			return
 		}
 
-		if !captcha.VerifyString(res.Captcha, res.CaptchaSolution) {
-			//err wrong  captha solution
-			res.ErrCode = -5
-			res.CaptchaState = -1
-			c.JSON(http.StatusOK, res)
-			return
-		}
-		res.ErrCode = 0
-		res.CaptchaState = 100
 		//check card in db
 		res = validateCard(res)
 		if res.ErrCode == 0 {
@@ -146,6 +153,26 @@ func CardValidate(c *gin.Context) {
 			}
 		}
 		c.JSON(http.StatusOK, res)
+	} else {
+		res.ErrCode = -1
+		res.Message = err.Error()
+		c.JSON(http.StatusOK, res)
+	}
+}
+
+func CardRegister(c *gin.Context) {
+	var dto RegisterDTO
+	var res ValidateResult
+
+	if err := c.ShouldBindJSON(&dto); err == nil {
+		res = dto.Result
+		//check captcha
+		if !ValidateCaptcha(&res){
+			c.JSON(http.StatusOK, res)
+			return
+		}
+		//set client data
+
 	} else {
 		res.ErrCode = -1
 		res.Message = err.Error()
