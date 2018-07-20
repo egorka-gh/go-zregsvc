@@ -5,6 +5,25 @@ import (
 	"strings"
 )
 
+const (
+	// err states
+	errDATABASE      int = -1 // more precisely app level error
+	errWrongCAPTCHA  int = -5
+	errWrongCardCODE int = -10
+	errWrongSTATE    int = -11
+	errCardNotISSUED int = -12
+
+	// web info states
+	webSTART        int = -1000
+	webCONFIRMATION int = -1001
+
+	// client states
+	clNotREGISTERED   int = 1
+	clREGISTRATION    int = 5
+	clWaiteREFINEMENT int = 10
+	clREGISTERED      int = 100
+)
+
 //ClientState clent states & frontend messages
 type ClientState struct {
 	ID         int    `json:"id" db:"id"`
@@ -52,6 +71,7 @@ type Client struct {
 	SendPromo  bool   `json:"sendPromo" db:"send_promo"`
 }
 
+//RegisterDTO dto model
 type RegisterDTO struct {
 	Client Client
 	Result ValidateResult
@@ -70,7 +90,7 @@ func validateCard(result ValidateResult) ValidateResult {
 
 	// check if card empty
 	if len(strings.TrimSpace(result.Card)) == 0 {
-		result.ErrCode = -10
+		result.ErrCode = errWrongCardCODE
 		result.Message = "Указана не верная карта"
 		return result
 	}
@@ -85,12 +105,12 @@ func validateCard(result ValidateResult) ValidateResult {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			//range not found
-			result.ErrCode = -10
+			result.ErrCode = errWrongCardCODE
 			result.Message = "Указана не верная карта"
 			return result
 		}
 		//db error
-		result.ErrCode = -1
+		result.ErrCode = errDATABASE
 		result.Message = err.Error()
 		return result
 	}
@@ -106,9 +126,9 @@ func validateCard(result ValidateResult) ValidateResult {
 	if err == nil {
 		//card exists
 		result.State = client.State
-		if result.State >= 5 {
+		if result.State >= clREGISTRATION {
 			//card registered
-			result.ErrCode = -11
+			result.ErrCode = errWrongSTATE
 			result.Message = "Карта уже зарегистрирована"
 		}
 	} else {
@@ -116,12 +136,12 @@ func validateCard(result ValidateResult) ValidateResult {
 			//no card found
 			if prg.CheckIssued {
 				//card has to be issued
-				result.ErrCode = -12
+				result.ErrCode = errCardNotISSUED
 				result.Message = "Карта не выдана"
 			}
 		} else {
 			//db error
-			result.ErrCode = -1
+			result.ErrCode = errDATABASE
 			result.Message = err.Error()
 		}
 	}
@@ -130,4 +150,97 @@ func validateCard(result ValidateResult) ValidateResult {
 		result.Program = 0
 	}
 	return result
+}
+
+func registerCard(dto *RegisterDTO) ValidateResult {
+	res := dto.Result
+	cli := dto.Client
+
+	//check if card exists vs state < CL_REGISTRATION
+	var client Client
+	ssql := "SELECT program, card, state, IFNULL(surname, '') surname, IFNULL(name, '') name, IFNULL(patronymic, '') patronymic," +
+		" IFNULL(phone_code, '') phone_code, IFNULL(phone, '') phone, IFNULL(email, '') email, gender," +
+		" IFNULL(birthday, '') birthday, IFNULL(pet, '') pet, send_promo" +
+		" FROM clients c WHERE c.program = ? AND c.card = ? AND c.state<5"
+	err := db.Get(&client, ssql, res.Program, res.Card)
+
+	if cli.Birthday == "" {
+		cli.Birthday = "shouldSetNull"
+	}
+	promo := 0
+	if cli.SendPromo {
+		promo = 1
+	}
+	if err == nil {
+		//card exists
+		//update
+		ssql =
+			"UPDATE clients" +
+				" SET" +
+				" state = ?" +
+				" ,surname = ?" +
+				" ,name = ?" +
+				" ,patronymic = ?" +
+				" ,phone_code = ?" +
+				" ,phone = ?" +
+				" ,email = ?" +
+				" ,gender = ?" +
+				" ,birthday = STR_TO_DATE( ? , '%d.%m.%Y')" +
+				" ,pet = ?" +
+				" ,send_promo = ?" +
+				" WHERE program = ? AND card = ?"
+		_, err = db.Exec(ssql,
+			clREGISTRATION,
+			cli.Surname,
+			cli.Name,
+			cli.Patronymic,
+			cli.PhoneCode,
+			cli.Phone,
+			cli.Email,
+			cli.Gender,
+			cli.Birthday,
+			cli.Pet,
+			promo,
+			res.Program,
+			res.Card)
+	} else {
+		if err == sql.ErrNoRows {
+			//no card found
+			//insert
+			ssql =
+				"INSERT IGNORE INTO clients" +
+					" (program, card, state, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo)" +
+					" VALUES" +
+					" (?,?,?,?,?,?,?,?,?,?, STR_TO_DATE( ? , '%d.%m.%Y'),?,?)"
+			_, err = db.Exec(ssql,
+				res.Program,
+				res.Card,
+				clREGISTRATION,
+				cli.Surname,
+				cli.Name,
+				cli.Patronymic,
+				cli.PhoneCode,
+				cli.Phone,
+				cli.Email,
+				cli.Gender,
+				cli.Birthday,
+				cli.Pet,
+				promo)
+		}
+	}
+
+	if err != nil {
+		//db error
+		res.ErrCode = errDATABASE
+		res.Program = 0
+		res.Message = err.Error()
+	} else {
+		//complited, use err state??
+		//res.Program = 0
+		//res.ErrCode = errWrongSTATE
+		res.ErrCode = 0
+		res.State = clREGISTRATION
+	}
+
+	return res
 }

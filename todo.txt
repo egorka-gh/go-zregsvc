@@ -82,44 +82,10 @@ SELECT id, name, alias, external, active
 SELECT id, program, card_start, card_end, active, card_len, check_issued
   FROM program_cards;
 
-SELECT program, card, state, state_date, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo, sync, sync2
+SELECT program, card, state, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo
   FROM clients;
 
 INSERT INTO clients
-(
-  program
- ,card
- ,state
- ,state_date
- ,surname
- ,name
- ,patronymic
- ,phone_code
- ,phone
- ,email
- ,gender
- ,birthday
- ,pet
- ,send_promo
- ,sync
- ,sync2
-)
+(program, card, state, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo)
 VALUES
-(
-  0 -- program - INT(5) NOT NULL
- ,'' -- card - VARCHAR(50) NOT NULL
- ,0 -- state - INT(5) NOT NULL
- ,NOW() -- state_date - DATETIME
- ,'' -- surname - VARCHAR(100)
- ,'' -- name - VARCHAR(100)
- ,'' -- patronymic - VARCHAR(100)
- ,'' -- phone_code - VARCHAR(10)
- ,'' -- phone - VARCHAR(14)
- ,'' -- email - VARCHAR(50)
- ,0 -- gender - INT(5)
- ,NOW() -- birthday - DATETIME
- ,'' -- pet - VARCHAR(100)
- ,0 -- send_promo - TINYINT(1)
- ,0 -- sync - TINYINT(1)
- ,0 -- sync2 - TINYINT(1)
-);
+(?,?,?,?,?,?,?,?,?,?, STR_TO_DATE( ? , '%d.%m.%Y'),?,?)

@@ -66,9 +66,9 @@ func main() {
 //PingMe check db state
 func PingMe(c *gin.Context) {
 	var res ValidateResult
-	res.State = -1000
+	res.State = 0
 	if err := db.Ping(); err != nil {
-		res.ErrCode = -1
+		res.ErrCode = errDATABASE
 		res.Message = err.Error()
 	} else {
 		res.Message = "Ping OK"
@@ -95,32 +95,32 @@ func GetStates(c *gin.Context) {
 	}
 }
 
-func ValidateCaptcha(res *ValidateResult) bool {
+func validateCaptcha(res *ValidateResult) bool {
 	//check captcha
 	if len(res.Captcha) == 0 {
 		//err captha id empty
-		res.ErrCode = -5
+		res.ErrCode = errWrongCAPTCHA
 		res.CaptchaState = -10
 		return false
 	}
 	card, ok := captchaStore.GetTag(res.Captcha)
 	if !ok {
 		//err captha id invalid
-		res.ErrCode = -5
+		res.ErrCode = errWrongCAPTCHA
 		res.CaptchaState = -10
 		return false
 	}
 	//chek if captha not taged vs card or card is same
 	if len(card) != 0 && card != res.Card {
 		//err attempt to use solved capthca vs onother card
-		res.ErrCode = -5
+		res.ErrCode = errWrongCAPTCHA
 		res.CaptchaState = -100
 		return false
 	}
 
 	if !captcha.VerifyString(res.Captcha, res.CaptchaSolution) {
 		//err wrong  captha solution
-		res.ErrCode = -5
+		res.ErrCode = errWrongCAPTCHA
 		res.CaptchaState = -1
 		return false
 	}
@@ -135,7 +135,7 @@ func CardValidate(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&res); err == nil {
 		//check captcha
-		if !ValidateCaptcha(&res){
+		if !validateCaptcha(&res) {
 			c.JSON(http.StatusOK, res)
 			return
 		}
@@ -146,7 +146,7 @@ func CardValidate(c *gin.Context) {
 			//lock capthca vc card
 			if !captchaStore.SetTag(res.Captcha, res.Card) {
 				// some thread lock capthca ???
-				res.ErrCode = -5
+				res.ErrCode = errWrongCAPTCHA
 				res.CaptchaState = -100
 				res.Program = 0
 				res.State = 0
@@ -154,12 +154,13 @@ func CardValidate(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, res)
 	} else {
-		res.ErrCode = -1
+		res.ErrCode = errDATABASE
 		res.Message = err.Error()
 		c.JSON(http.StatusOK, res)
 	}
 }
 
+//CardRegister register client
 func CardRegister(c *gin.Context) {
 	var dto RegisterDTO
 	var res ValidateResult
@@ -167,14 +168,23 @@ func CardRegister(c *gin.Context) {
 	if err := c.ShouldBindJSON(&dto); err == nil {
 		res = dto.Result
 		//check captcha
-		if !ValidateCaptcha(&res){
+		if !validateCaptcha(&res) {
 			c.JSON(http.StatusOK, res)
 			return
 		}
+
+		captchaStore.Del(res.Captcha)
+
+		if res.Program == 0 || res.Card != dto.Client.Card {
+			res.ErrCode = errDATABASE
+			res.Message = "Application flow error"
+			c.JSON(http.StatusOK, res)
+		}
 		//set client data
 
+		c.JSON(http.StatusOK, registerCard(&dto))
 	} else {
-		res.ErrCode = -1
+		res.ErrCode = errDATABASE
 		res.Message = err.Error()
 		c.JSON(http.StatusOK, res)
 	}
