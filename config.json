@@ -1,5 +1,5 @@
 {
     "Port": "8080",
-    "ConnectionString": "root:3411@tcp(192.168.0.10:3306)/pshdata",
+    "ConnectionString": "root:3411@tcp(127.0.0.1:3306)/pshdata",
     "cors": "http://localhost:4200"
 }
