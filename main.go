@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -12,29 +13,97 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/kardianos/osext"
+	"github.com/kardianos/service"
 	"github.com/spf13/viper"
 )
 
 var db *sqlx.DB
 var captchaStore TagedStore
 
-func init() {
+var logger service.Logger
+
+type program struct{}
+
+func (p *program) Start(s service.Service) error {
+	if service.Interactive() {
+		logger.Info("Running in terminal.")
+		logger.Infof("Valid startup parametrs: %q\n", service.ControlAction)
+	} else {
+		logger.Info("Starting service...")
+	}
+	// Start should not block. Do the actual work async.
+	go p.run()
+	return nil
+}
+
+/*
+func (p *program) run() {
+	// Do work here
+}
+*/
+func (p *program) Stop(s service.Service) error {
+	// Stop should not block. Return with a few seconds.
+	logger.Info("I'm Stopping!")
+	//<-time.After(time.Second * 13)
+	return nil
+}
+
+func main() {
+	svcConfig := &service.Config{
+		Name:        "goZooServer",
+		DisplayName: "Go Zoo Server",
+		Description: "Zoobazar reg service",
+	}
+	prg := &program{}
+
+	s, err := service.New(prg, svcConfig)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	if len(os.Args) > 1 {
+		err = service.Control(s, os.Args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	logger, err = s.Logger(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = s.Run()
+	if err != nil {
+		logger.Error(err)
+	}
+}
+
+func (p *program) run() {
 	var err error
 	viper.SetDefault("Port", "8080")
 	viper.SetDefault("ConnectionString", "root:3411@tcp(127.0.0.1:3306)/pshdata")
 	//TODO remove in prod
 	viper.SetDefault("cors", "http://localhost:4200")
-	viper.AddConfigPath(".")
+
+	var path string
+	path, err = osext.ExecutableFolder()
+	if err != nil {
+		path = "."
+	}
+	viper.AddConfigPath(path)
 	viper.SetConfigName("config")
 	err = viper.ReadInConfig()
 	if err != nil {
-		log.Print(err)
-		log.Print("Using defaults")
+		logger.Info(err)
+		logger.Info("Start using default setings")
 	}
 
 	db, err = sqlx.Connect("mysql", viper.GetString("ConnectionString"))
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err)
+	} else {
+		logger.Info("MySql connection - ok")
 	}
 
 	captchaStore = NewTagedStore(100, 60*time.Minute)
@@ -42,9 +111,7 @@ func init() {
 
 	//TODO add in prod
 	//gin.SetMode(gin.ReleaseMode)
-}
 
-func main() {
 	r := gin.Default()
 
 	config := cors.DefaultConfig()
