@@ -81,10 +81,9 @@ func main() {
 
 func (p *program) run() {
 	var err error
-	viper.SetDefault("Port", "8080")
+	viper.SetDefault("Port", "8088")
 	viper.SetDefault("ConnectionString", "root:3411@tcp(127.0.0.1:3306)/pshdata")
-	//TODO remove in prod
-	viper.SetDefault("cors", "http://localhost:4200")
+	viper.SetDefault("cors", "")
 
 	var path string
 	path, err = osext.ExecutableFolder()
@@ -110,7 +109,7 @@ func (p *program) run() {
 	captcha.SetCustomStore(captchaStore)
 
 	//TODO add in prod
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 
 	r := gin.Default()
 
@@ -127,7 +126,6 @@ func (p *program) run() {
 	r.POST("/register/", CardRegister)
 
 	r.Run(":" + viper.GetString("Port"))
-	//fmt.Printf("hello, world\n")
 }
 
 //PingMe check db state
