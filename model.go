@@ -62,7 +62,7 @@ type Client struct {
 	Surname    string `json:"surname" db:"surname"`
 	Name       string `json:"name" db:"name"`
 	Patronymic string `json:"patronymic" db:"patronymic"`
-	PhoneCode  string `json:"phoneCode" db:"phone_code"`
+	PhoneCode  string `json:"phone_code" db:"phone_code"`
 	Phone      string `json:"phone" db:"phone"`
 	Email      string `json:"email" db:"email"`
 	Gender     int    `json:"gender" db:"gender"`
@@ -164,8 +164,9 @@ func registerCard(dto *RegisterDTO) ValidateResult {
 		" FROM clients c WHERE c.program = ? AND c.card = ? AND c.state<5"
 	err := db.Get(&client, ssql, res.Program, res.Card)
 
-	if cli.Birthday == "" {
-		cli.Birthday = "shouldSetNull"
+	var birthday *string
+	if cli.Birthday != "" {
+		birthday = &cli.Birthday
 	}
 	promo := 0
 	if cli.SendPromo {
@@ -198,7 +199,7 @@ func registerCard(dto *RegisterDTO) ValidateResult {
 			cli.Phone,
 			cli.Email,
 			cli.Gender,
-			cli.Birthday,
+			birthday,
 			cli.Pet,
 			promo,
 			res.Program,
@@ -223,7 +224,7 @@ func registerCard(dto *RegisterDTO) ValidateResult {
 				cli.Phone,
 				cli.Email,
 				cli.Gender,
-				cli.Birthday,
+				birthday,
 				cli.Pet,
 				promo)
 		}
