@@ -1,91 +1,25 @@
-go build && zregsvc.exe
-
-	public DmlResult<Client> cardAdd(Client client){
-		DmlResult<Client> result= new DmlResult<Client>();
-		//check if card exists vs state < CL_REGISTRATION
-		String sql="SELECT * FROM clients c WHERE c.program = ? AND c.card = ? AND c.state<5";
-		SelectResult<Client> cli=runSelect(Client.class, sql, client.getProgram(), client.getCard());
-		if(!cli.isComplete()){
-			result.cloneError(cli);
-			return result;
-		}
-		if(cli.getData()!=null && !cli.getData().isEmpty()){
-			//update
-			result=runUpdate(client);
-		}else{
-			//insert
-			result=runInsert(client);
-		}
-		return result;
-	}
-
-	public ValidateResult validateCardAdd(String card){
-		ValidateResult result= new ValidateResult();
-		result.setState(0);
-		result.setCard(card);
-		result.setErrCode(0);
-		
-		//check by card range
-		String sql="SELECT pc.*"+
-					 " FROM programs p"+
-					   " INNER JOIN program_cards pc ON p.id = pc.program AND pc.active!=0"+
-					  " WHERE LENGTH(?) = pc.card_len AND ? BETWEEN pc.card_start AND pc.card_end AND p.external=0 AND p.active !=0";
-		SelectResult<DiscountProgramCards> prog=runSelect(DiscountProgramCards.class,sql,card,card);
-		if(!prog.isComplete()){
-			//db error
-			result.setErrCode(-1);
-			result.setMessage(prog.getErrMesage());
-			return result;
-		}
-		if(prog.getData()==null || prog.getData().isEmpty()){
-			//range not found
-			result.setErrCode(-10);
-			result.setMessage("Указана не верная карта");
-			return result;
-		}
-		result.setProgram(prog.getData().get(0).getProgram());
-		
-		//check if card exists
-		sql="SELECT * FROM clients c WHERE c.program = ? AND c.card = ?";
-		SelectResult<Client> cli=runSelect(Client.class, sql, result.getProgram(), card);
-		if(!cli.isComplete()){
-			//db error
-			result.setErrCode(-1);
-			result.setMessage(cli.getErrMesage());
-			return result;
-		}
-		if(cli.getData()!=null && !cli.getData().isEmpty()){
-			//card exists
-			result.setState(cli.getData().get(0).getState());
-			if(result.getState()>=5){
-				//card registered
-				result.setErrCode(-11);
-				result.setMessage("Карта уже зарегистрирована");
-				return result;
-			}
-		}else{
-			//no card found
-			if(prog.getData().get(0).isCheckIssued()){
-				//card has to be issued
-				result.setErrCode(-12);
-				result.setMessage("Карта не выдана");
-				return result;
-			}
-		}
-		return result;
-	}
-
-
-SELECT id, name, alias, external, active
-  FROM programs;
-
-SELECT id, program, card_start, card_end, active, card_len, check_issued
-  FROM program_cards;
-
-SELECT program, card, state, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo
+SELECT program, card, state, state_date, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo, sync, sync2, version, deleted
+  INTO OUTFILE 'C:/tmp/result1.text'
   FROM clients;
 
-INSERT INTO clients
-(program, card, state, surname, name, patronymic, phone_code, phone, email, gender, birthday, pet, send_promo)
-VALUES
-(?,?,?,?,?,?,?,?,?,?, STR_TO_DATE( ? , '%d.%m.%Y'),?,?)
+LOAD DATA LOCAL INFILE 'D:/Buffer/clients.dat' REPLACE 
+INTO TABLE clients
+(program,
+  card,
+  state,
+  state_date,
+  surname,
+  name,
+  patronymic,
+  phone_code,
+  phone,
+  email,
+  gender,
+  birthday,
+  pet,
+  send_promo,
+  sync,
+  sync2);
+
+жек сервак
+37.17.55.236:35100
